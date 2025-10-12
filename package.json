@@ -1,0 +1,33 @@
+{
+  "name": "lammps.js",
+  "version": "0.1.0",
+  "description": "Browser-friendly WebAssembly build of LAMMPS with a typed JavaScript interface.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./cpp/lammps.js"
+    },
+    "./wasm": "./cpp/lammps.js"
+  },
+  "types": "./types/index.d.ts",
+  "files": [
+    "cpp/lammps.js",
+    "cpp/locateFile.js",
+    "cpp/build.py",
+    "types",
+    "README.md"
+  ],
+  "scripts": {
+    "build:wasm": "python3 cpp/build.py",
+    "test": "npm run build:wasm && vitest run",
+    "test:watch": "vitest watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "jsdom": "^24.1.3",
+    "typescript": "^5.4.0",
+    "vitest": "^1.5.0"
+  }
+}

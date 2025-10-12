@@ -4,17 +4,31 @@
 #include "domain.h"
 #include "force.h"
 #include "library.h"
+#include "lmptype.h"
 #include "update.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
+#include <string>
 
 namespace {
 
-constexpr const char kSingleStepScript[] = "run 1 pre no post no\n";
+inline std::string buildRunCommand(std::int64_t steps, bool applyPre, bool applyPost) {
+  std::string command = "run ";
+  command += std::to_string(steps);
+  command += applyPre ? " pre yes" : " pre no";
+  command += applyPost ? " post yes" : " post no";
+  command.push_back('\n');
+  return command;
+}
 
-[[nodiscard]] double component(const double *const vector, const int index) noexcept {
-  return vector[index];
+inline LAMMPSWeb::ScalarType scalarForTagint() noexcept {
+  using LAMMPS_NS::tagint;
+  if (sizeof(tagint) == sizeof(std::int64_t)) {
+    return LAMMPSWeb::ScalarType::Int64;
+  }
+  return LAMMPSWeb::ScalarType::Int32;
 }
 
 }  // namespace
@@ -39,6 +53,7 @@ void LAMMPSWeb::start() {
   auto *instance = static_cast<LAMMPS_NS::LAMMPS *>(
     lammps_open_no_mpi(0, nullptr, nullptr)
   );
+
   if (!instance) {
     throw std::runtime_error("Failed to open LAMMPS instance");
   }
@@ -50,76 +65,98 @@ void LAMMPSWeb::stop() {
   if (!hasSimulation()) {
     return;
   }
+
   m_lmp.reset();
   resetStaticBuffers();
 }
 
-void LAMMPSWeb::step() {
+void LAMMPSWeb::advance(std::int64_t steps, bool applyPre, bool applyPost) {
   auto *sim = raw();
-  if (!sim) {
+  if (!sim || steps <= 0) {
     return;
   }
 
-  lammps_commands_string(static_cast<void *>(sim), kSingleStepScript);
+  const std::string command = buildRunCommand(steps, applyPre, applyPost);
+  lammps_commands_string(static_cast<void *>(sim), command.c_str());
 }
 
 void LAMMPSWeb::runCommand(const std::string &command) {
-  auto *sim = raw();
-  if (!sim) {
+  if (command.empty()) {
     return;
   }
 
-  lammps_commands_string(static_cast<void *>(sim), command.c_str());
+  std::string script = command;
+  if (script.back() != '\n') {
+    script.push_back('\n');
+  }
+  runScript(script);
+}
+
+void LAMMPSWeb::runScript(const std::string &script) {
+  auto *sim = raw();
+  if (!sim || script.empty()) {
+    return;
+  }
+
+  lammps_commands_string(static_cast<void *>(sim), script.c_str());
 }
 
 void LAMMPSWeb::runFile(const std::string &path) {
   auto *sim = raw();
-  if (!sim) {
+  if (!sim || path.empty()) {
     return;
   }
 
   lammps_file(static_cast<void *>(sim), path.c_str());
 }
 
+bool LAMMPSWeb::isReady() const noexcept {
+  return hasSimulation();
+}
+
 bool LAMMPSWeb::getIsRunning() const noexcept {
   const auto *sim = raw();
-  if (!sim || !sim->update) {
-    return false;
-  }
-  return sim->update->whichflag != 0;
+  return sim && sim->update && sim->update->whichflag != 0;
 }
 
-int LAMMPSWeb::getNumAtoms() const noexcept {
+std::int64_t LAMMPSWeb::getCurrentStep() const noexcept {
   const auto *sim = raw();
-  if (!sim) {
+  if (!sim || !sim->update) {
     return 0;
   }
-  return static_cast<int>(lammps_get_natoms(static_cast<void *>(const_cast<LAMMPS_NS::LAMMPS *>(sim))));
+  return static_cast<std::int64_t>(sim->update->ntimestep);
 }
 
-int LAMMPSWeb::getNumBonds() const noexcept {
-  return static_cast<int>(m_bondsPosition1.size() / 3);
+double LAMMPSWeb::getTimestepSize() const noexcept {
+  const auto *sim = raw();
+  if (!sim || !sim->update) {
+    return 0.0;
+  }
+  return sim->update->dt;
 }
 
-int LAMMPSWeb::computeParticles() {
+LAMMPSWeb::ParticleSnapshot LAMMPSWeb::syncParticles() {
+  ParticleSnapshot snapshot{};
+
   auto *sim = raw();
   if (!sim || !sim->atom || !sim->domain) {
     m_particlePositions.clear();
-    return 0;
+    return snapshot;
   }
 
   auto *atom = sim->atom;
-  const int numAtoms = static_cast<int>(atom->natoms);
+  const auto numAtoms = static_cast<std::uint32_t>(atom->natoms);
+  if (numAtoms == 0) {
+    m_particlePositions.clear();
+    return snapshot;
+  }
 
   m_particlePositions.resize(static_cast<std::size_t>(numAtoms) * 3);
-  if (numAtoms == 0) {
-    return 0;
-  }
 
   auto *domain = sim->domain;
   auto *image = static_cast<int *>(lammps_extract_atom(static_cast<void *>(sim), "image"));
 
-  for (int i = 0; i < numAtoms; ++i) {
+  for (std::uint32_t i = 0; i < numAtoms; ++i) {
     double position[3] = { atom->x[i][0], atom->x[i][1], atom->x[i][2] };
     if (image) {
       domain->unmap(position, image[i]);
@@ -131,15 +168,26 @@ int LAMMPSWeb::computeParticles() {
     m_particlePositions[base + 2] = static_cast<float>(position[2]);
   }
 
-  return numAtoms;
+  snapshot.count = numAtoms;
+  snapshot.positions = makeView(m_particlePositions, 3, ScalarType::Float32);
+
+  auto *ids = lammps_extract_atom(static_cast<void *>(sim), "id");
+  snapshot.ids = makeRawView(ids, numAtoms, 1, scalarForTagint());
+
+  auto *types = lammps_extract_atom(static_cast<void *>(sim), "type");
+  snapshot.types = makeRawView(types, numAtoms, 1, ScalarType::Int32);
+
+  return snapshot;
 }
 
-int LAMMPSWeb::computeBonds() {
+LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBonds() {
+  BondSnapshot snapshot{};
+
   auto *sim = raw();
   if (!sim || !sim->atom || !sim->domain) {
     m_bondsPosition1.clear();
     m_bondsPosition2.clear();
-    return 0;
+    return snapshot;
   }
 
   auto *atom = sim->atom;
@@ -148,14 +196,14 @@ int LAMMPSWeb::computeBonds() {
   if (atom->nbonds == 0 || !atom->num_bond || !atom->bond_atom) {
     m_bondsPosition1.clear();
     m_bondsPosition2.clear();
-    return 0;
+    return snapshot;
   }
 
-  const auto totalBonds = static_cast<std::size_t>(atom->nbonds) * 3;
+  const auto totalBonds = static_cast<std::size_t>(atom->nbonds);
   m_bondsPosition1.clear();
   m_bondsPosition2.clear();
-  m_bondsPosition1.reserve(totalBonds);
-  m_bondsPosition2.reserve(totalBonds);
+  m_bondsPosition1.reserve(totalBonds * 3);
+  m_bondsPosition2.reserve(totalBonds * 3);
 
   auto *image = static_cast<int *>(lammps_extract_atom(static_cast<void *>(sim), "image"));
   const bool shareBondAcrossRanks = sim->force && sim->force->newton_bond;
@@ -201,25 +249,21 @@ int LAMMPSWeb::computeBonds() {
     }
   }
 
-  return getNumBonds();
+  snapshot.count = static_cast<std::uint32_t>(m_bondsPosition1.size() / 3);
+  snapshot.first = makeView(m_bondsPosition1, 3, ScalarType::Float32);
+  snapshot.second = makeView(m_bondsPosition2, 3, ScalarType::Float32);
+  return snapshot;
 }
 
-LAMMPSWeb::pointer_type LAMMPSWeb::getPositionsPointer() noexcept {
-  return pointerFrom(m_particlePositions);
-}
+LAMMPSWeb::BoxSnapshot LAMMPSWeb::syncSimulationBox() {
+  BoxSnapshot snapshot{};
 
-LAMMPSWeb::pointer_type LAMMPSWeb::getBondsPosition1Pointer() noexcept {
-  return pointerFrom(m_bondsPosition1);
-}
-
-LAMMPSWeb::pointer_type LAMMPSWeb::getBondsPosition2Pointer() noexcept {
-  return pointerFrom(m_bondsPosition2);
-}
-
-LAMMPSWeb::pointer_type LAMMPSWeb::getCellMatrixPointer() noexcept {
   auto *sim = raw();
   if (!sim || !sim->domain) {
-    return 0;
+    m_cellMatrix.fill(0.0f);
+    m_boxSize.fill(0.0f);
+    m_origo.fill(0.0f);
+    return snapshot;
   }
 
   auto *domain = sim->domain;
@@ -231,68 +275,23 @@ LAMMPSWeb::pointer_type LAMMPSWeb::getCellMatrixPointer() noexcept {
   const double *c = domain->corners[4];
 
   for (int axis = 0; axis < 3; ++axis) {
-    m_cellMatrix[axis] = component(a, axis) - component(origin, axis);
-    m_cellMatrix[3 + axis] = component(b, axis) - component(origin, axis);
-    m_cellMatrix[6 + axis] = component(c, axis) - component(origin, axis);
+    m_cellMatrix[axis] = static_cast<float>(a[axis] - origin[axis]);
+    m_cellMatrix[3 + axis] = static_cast<float>(b[axis] - origin[axis]);
+    m_cellMatrix[6 + axis] = static_cast<float>(c[axis] - origin[axis]);
+    m_origo[axis] = static_cast<float>(origin[axis]);
+    m_boxSize[axis] = static_cast<float>(domain->prd[axis]);
   }
 
-  return pointerFrom(m_cellMatrix);
-}
-
-LAMMPSWeb::pointer_type LAMMPSWeb::getOrigoPointer() noexcept {
-  auto *sim = raw();
-  if (!sim || !sim->domain) {
-    return 0;
-  }
-
-  auto *domain = sim->domain;
-  domain->box_corners();
-
-  for (int axis = 0; axis < 3; ++axis) {
-    m_origo[axis] = component(domain->corners[0], axis);
-  }
-
-  return pointerFrom(m_origo);
-}
-
-LAMMPSWeb::pointer_type LAMMPSWeb::getBoxSizePointer() noexcept {
-  auto *sim = raw();
-  if (!sim || !sim->domain) {
-    return 0;
-  }
-
-  auto *domain = sim->domain;
-  m_boxSize[0] = domain->prd[0];
-  m_boxSize[1] = domain->prd[1];
-  m_boxSize[2] = domain->prd[2];
-
-  return pointerFrom(m_boxSize);
-}
-
-LAMMPSWeb::pointer_type LAMMPSWeb::getIdPointer() const noexcept {
-  const auto *sim = raw();
-  if (!sim) {
-    return 0;
-  }
-
-  auto *ids = lammps_extract_atom(static_cast<void *>(const_cast<LAMMPS_NS::LAMMPS *>(sim)), "id");
-  return reinterpret_cast<pointer_type>(ids);
-}
-
-LAMMPSWeb::pointer_type LAMMPSWeb::getTypePointer() const noexcept {
-  const auto *sim = raw();
-  if (!sim) {
-    return 0;
-  }
-
-  auto *types = lammps_extract_atom(static_cast<void *>(const_cast<LAMMPS_NS::LAMMPS *>(sim)), "type");
-  return reinterpret_cast<pointer_type>(types);
+  snapshot.matrix = makeView(m_cellMatrix, 3, ScalarType::Float32);
+  snapshot.origin = makeView(m_origo, 3, ScalarType::Float32);
+  snapshot.lengths = makeView(m_boxSize, 3, ScalarType::Float32);
+  return snapshot;
 }
 
 void LAMMPSWeb::resetStaticBuffers() noexcept {
-  m_cellMatrix.fill(0.0);
-  m_boxSize.fill(0.0);
-  m_origo.fill(0.0);
+  m_cellMatrix.fill(0.0f);
+  m_boxSize.fill(0.0f);
+  m_origo.fill(0.0f);
   m_particlePositions.clear();
   m_bondsPosition1.clear();
   m_bondsPosition2.clear();
