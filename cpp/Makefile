@@ -2,13 +2,14 @@ CXX = emcc
 
 LAMMPS_SOURCE := $(wildcard lammps/src/*.cpp)
 LAMMPS_SOURCE := $(filter-out lammps/src/main.cpp, $(LAMMPS_SOURCE))
+LAMMPS_SOURCE += lammps/src/STUBS/mpi.cpp
 LAMMPS_OBJ_FILES := $(addprefix obj/,$(notdir $(LAMMPS_SOURCE:.cpp=.o)))
 
 #LD_FLAGS := -O1 --pre-js locateFile.js --no-entry -gsource-map --source-map-base="http://localhost:3000/atomify/" -lembind
 #CC_FLAGS := -O0 -DLAMMPS_EXCEPTIONS -DLAMMPS_SMALLSMALL -gsource-map # -DNDEBUG
 LD_FLAGS := -Oz --pre-js locateFile.js --no-entry -lembind
-CC_FLAGS := -Oz -DLAMMPS_EXCEPTIONS -DLAMMPS_SMALLSMALL -s NO_DISABLE_EXCEPTION_CATCHING=1 -DCOLVARS_LAMMPS
-INCLUDE_FLAGS := -Ilammps/src
+CC_FLAGS := -Oz -DLAMMPS_EXCEPTIONS -s NO_DISABLE_EXCEPTION_CATCHING=1 -DCOLVARS_LAMMPS
+INCLUDE_FLAGS := -Ilammps/src -Ilammps/src/STUBS
 SYMBOLS := \
   -s ENVIRONMENT='web,worker,node' \
   -s ALLOW_MEMORY_GROWTH=1 \
@@ -35,6 +36,9 @@ obj:
 	mkdir -p obj
 
 obj/%.o: lammps/src/%.cpp
+	$(CXX) $(CC_FLAGS) $(INCLUDE_FLAGS) -c -o $@ $<
+
+obj/%.o: lammps/src/STUBS/%.cpp
 	$(CXX) $(CC_FLAGS) $(INCLUDE_FLAGS) -c -o $@ $<
 
 clean:

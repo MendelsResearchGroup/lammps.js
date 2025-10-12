@@ -12,6 +12,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/bind.h>
+#include <emscripten/val.h>
 #endif
 
 class LAMMPSWeb {
@@ -171,10 +172,10 @@ EMSCRIPTEN_BINDINGS(lammps_web_module) {
       "advance",
       emscripten::optional_override([](LAMMPSWeb &self,
                                        std::int64_t steps,
-                                       emscripten::optional<bool> applyPre,
-                                       emscripten::optional<bool> applyPost) {
-        const bool pre = applyPre ? *applyPre : false;
-        const bool post = applyPost ? *applyPost : false;
+                                       emscripten::val applyPre,
+                                       emscripten::val applyPost) {
+        const bool pre = applyPre.isUndefined() ? false : applyPre.as<bool>();
+        const bool post = applyPost.isUndefined() ? false : applyPost.as<bool>();
         self.advance(steps, pre, post);
       })
     )

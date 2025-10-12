@@ -31,6 +31,22 @@ inline LAMMPSWeb::ScalarType scalarForTagint() noexcept {
   return LAMMPSWeb::ScalarType::Int32;
 }
 
+template <typename DomainT>
+auto invokeMinimumImage(DomainT* domain, double &dx, double &dy, double &dz, int)
+    -> decltype(domain->minimum_image(dx, dy, dz), (void)0) {
+  domain->minimum_image(dx, dy, dz);
+}
+
+template <typename DomainT>
+auto invokeMinimumImage(DomainT* domain, double &dx, double &dy, double &dz, long)
+    -> decltype(domain->minimum_image("LAMMPSWeb", 0, dx, dy, dz), (void)0) {
+  domain->minimum_image("LAMMPSWeb", 0, dx, dy, dz);
+}
+
+inline void applyMinimumImage(LAMMPS_NS::Domain* domain, double &dx, double &dy, double &dz) {
+  invokeMinimumImage(domain, dx, dy, dz, 0);
+}
+
 }  // namespace
 
 void LAMMPSWeb::destroyLammps(LAMMPS_NS::LAMMPS *ptr) noexcept {
@@ -237,7 +253,7 @@ LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBonds() {
       double dx = second[0] - first[0];
       double dy = second[1] - first[1];
       double dz = second[2] - first[2];
-      domain->minimum_image(dx, dy, dz);
+      applyMinimumImage(domain, dx, dy, dz);
 
       m_bondsPosition1.push_back(static_cast<float>(first[0]));
       m_bondsPosition1.push_back(static_cast<float>(first[1]));

@@ -1,8 +1,7 @@
 # lammps.js
 
-Typed JavaScript/TypeScript wrapper around LAMMPS. The package exports the compiled `lammps.js` module together with a
-modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and
-simulation box data.
+Lightweight typed JavaScript/TypeScript wrapper around LAMMPS. The package exports the compiled `lammps.js` module together with a
+modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and simulation box data.
 
 ## Usage
 

@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-LAMMPS_TAG = os.environ.get("LAMMPS_TAG", "stable_23Jun2022_update1")
+LAMMPS_TAG = os.environ.get("LAMMPS_TAG", "patch_10Sep2025")
 BASE_DIR = Path(__file__).resolve().parent
 LAMMPS_DIR = BASE_DIR / "lammps"
 SRC_DIR = LAMMPS_DIR / "src"
@@ -28,15 +28,6 @@ if (!Module.locateFile) {
   };
 }
 """
-
-STALE_BASENAMES = [
-  "fix_atomify",
-  "data1d",
-  "atomify_compute",
-  "atomify_fix",
-  "atomify_variable",
-  "atomify_modify",
-]
 
 
 def read(path: Path) -> str:
@@ -83,28 +74,20 @@ def copy_custom_sources():
       if src.exists():
         copy_if_changed(src, dst)
 
-def remove_stale_sources():
-  removed_any = False
-  for base in STALE_BASENAMES:
-    for ext in (".cpp", ".h"):
-      path = SRC_DIR / f"{base}{ext}"
-      if path.is_file():
-        path.unlink()
-        print(f"removed: {path.relative_to(SRC_DIR)}")
-        removed_any = True
-  return removed_any
-
 def remove_broken_imd():
-  a = SRC_DIR / "fix_imd.cpp"
-  b = SRC_DIR / "fix_imd.h"
-  if a.is_file():
-    a.unlink()
-    if b.is_file():
-      b.unlink()
+  target_cpp = SRC_DIR / "fix_imd.cpp"
+  target_h = SRC_DIR / "fix_imd.h"
+  if target_cpp.is_file():
+    target_cpp.unlink()
+    if target_h.is_file():
+      target_h.unlink()
     print("removed: fix_imd.*")
+
+
 
 def build_native_once():
   print("Native prebuild ...")
+  subprocess.call("make clean-machine", shell=True, cwd=str(SRC_DIR))
   subprocess.check_call("make -j8 serial", shell=True, cwd=str(SRC_DIR))
 
 def build_wasm():
@@ -143,17 +126,8 @@ def build_bundle():
 
 def main():
   ensure_clone()
-  mpi_src = BASE_DIR / "mpi.cpp"
-  if mpi_src.exists():
-    copy_if_changed(mpi_src, SRC_DIR / "mpi.cpp")
-  # Only copy a stub header if you vendor it; otherwise LAMMPS provides its own STUBS
-  stub_h = LAMMPS_DIR / "src" / "STUBS" / "mpi.h"
-  if stub_h.is_file():
-    copy_if_changed(stub_h, SRC_DIR / "mpi.h")
-
   install_packages()
   copy_custom_sources()
-  remove_stale_sources()
   remove_broken_imd()
   build_native_once()
   build_wasm()
