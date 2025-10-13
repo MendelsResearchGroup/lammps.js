@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import createModule from "lammps.js";
+import { createLammps } from "lammps.js/client";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
 
@@ -80,6 +80,7 @@ const boxMaterial = new THREE.LineBasicMaterial({
 const box = new THREE.LineLoop(new THREE.BufferGeometry(), boxMaterial);
 scene.add(box);
 
+const USE_WRAPPED = false;
 const mat = new THREE.Matrix4();
 const color = new THREE.Color();
 
@@ -132,29 +133,18 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
 };
 
 (async () => {
-  const [module, script] = await Promise.all([createModule(), fetchInput()]);
-  const lmp = new module.LAMMPSWeb();
-
-  try {
-    module.FS.mkdir("/work");
-  } catch {}
-  module.FS.chdir("/work");
-  module.FS.writeFile("in.lj", script);
-
-  lmp.start();
-  lmp.runFile("in.lj");
+  const [script, client] = await Promise.all([fetchInput(), createLammps()]);
+  client.start();
+  client.runInput("in.lj", script);
 
   const step = () => {
-    lmp.advance(1, false, false);
+    client.advance(1, { applyPre: false, applyPost: false });
 
-    const particles = USE_WRAPPED ? lmp.syncParticlesWrapped() : lmp.syncParticles();
-    const bondsSnap = USE_WRAPPED ? lmp.syncBondsWrapped() : lmp.syncBonds();
-    const boxSnap = lmp.syncSimulationBox();
+    const particles = client.syncParticles({ wrapped: USE_WRAPPED });
+    const bondsSnap = client.syncBonds({ wrapped: USE_WRAPPED, copy: true });
+    const boxSnap = client.syncBox({ copy: true });
 
-    const pos = module.HEAPF32.subarray(
-      particles.positions.ptr >> 2,
-      (particles.positions.ptr >> 2) + particles.positions.length
-    );
+    const pos = particles.positions;
     const count = Math.min(particles.count, MAX_PARTICLES);
     atoms.count = count;
     for (let i = 0; i < count; i++) {
@@ -168,16 +158,8 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
     atoms.instanceMatrix.needsUpdate = true;
     if (atoms.instanceColor) atoms.instanceColor.needsUpdate = true;
 
-    const p1 = module.HEAPF32.subarray(
-      bondsSnap.first.ptr >> 2,
-      (bondsSnap.first.ptr >> 2) + bondsSnap.first.length
-    );
-    const p2 = module.HEAPF32.subarray(
-      bondsSnap.second.ptr >> 2,
-      (bondsSnap.second.ptr >> 2) + bondsSnap.second.length
-    );
     const bondsBuffer = bondsSnap.count
-      ? packBonds(Float32Array.from(p1), Float32Array.from(p2))
+      ? packBonds(bondsSnap.first, bondsSnap.second)
       : new Float32Array(0);
     bondsGeometry.setAttribute(
       "position",
@@ -188,16 +170,7 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
       bondsGeometry.computeBoundingSphere();
     }
 
-    const matrix = module.HEAPF32.subarray(
-      boxSnap.matrix.ptr >> 2,
-      (boxSnap.matrix.ptr >> 2) + boxSnap.matrix.length
-    );
-    const origin = module.HEAPF32.subarray(
-      boxSnap.origin.ptr >> 2,
-      (boxSnap.origin.ptr >> 2) + boxSnap.origin.length
-    );
-
-    const boxBuffer = buildBox(Float32Array.from(matrix), Float32Array.from(origin));
+    const boxBuffer = buildBox(boxSnap.matrix, boxSnap.origin);
     box.geometry.setAttribute(
       "position",
       new THREE.Float32BufferAttribute(boxBuffer, 3)
@@ -215,10 +188,9 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
   animate();
 
   window.addEventListener("beforeunload", () => {
-    lmp.stop();
+    client.dispose();
     atoms.dispose();
     bonds.geometry.dispose();
     box.geometry.dispose();
   });
 })();
-const USE_WRAPPED = true;

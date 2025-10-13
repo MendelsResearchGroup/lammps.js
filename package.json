@@ -9,6 +9,10 @@
       "types": "./types/index.d.ts",
       "default": "./cpp/lammps.js"
     },
+    "./client": {
+      "types": "./types/client.d.ts",
+      "default": "./client.ts"
+    },
     "./wasm": "./cpp/lammps.js"
   },
   "types": "./types/index.d.ts",
@@ -17,6 +21,7 @@
     "cpp/locateFile.js",
     "cpp/build.py",
     "types",
+    "client.ts",
     "README.md"
   ],
   "scripts": {

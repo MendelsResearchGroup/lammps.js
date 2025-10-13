@@ -86,9 +86,7 @@ def remove_broken_imd():
 
 
 def build_native_once():
-  print("Native prebuild ...")
-  subprocess.call("make clean-machine", shell=True, cwd=str(SRC_DIR))
-  subprocess.check_call("make -j8 serial", shell=True, cwd=str(SRC_DIR))
+  print("Native prebuild skipped (not required for wasm build) ...")
 
 def build_wasm():
   env = os.environ.copy()

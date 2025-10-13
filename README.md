@@ -9,30 +9,56 @@ modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and s
 ## Usage
 
 ```ts
-import createModule from "lammps.js";
+import { createLammps } from "lammps.js/client";
 
-const wasm = await createModule();
-const lmp = new wasm.LAMMPSWeb();
+const lammps = await createLammps();
 
-lmp.start();
-wasm.FS.writeFile("in.lj", "(LAMMPS input script)\n");
-lmp.runFile("in.lj");
+lammps.start().runScript(`
+  units lj
+  atom_style atomic
+  lattice fcc 0.8442
+  region box block 0 3 0 3 0 3
+  create_box 1 box
+  create_atoms 1 box
+  mass 1 1.0
+  pair_style lj/cut 2.5
+  pair_coeff 1 1 1.0 1.0 2.5
+  run 1
+`);
 
-const particles = lmp.syncParticles();
-const snapshot = wasm.HEAPF32.subarray(
-  particles.positions.ptr >> 2,
-  (particles.positions.ptr >> 2) + particles.positions.length
-);
+const particles = lammps.syncParticles({ copy: true });
 console.log(`atoms: ${particles.count}`);
 
-const wrapped = lmp.syncParticlesWrapped();
+const wrapped = lammps.syncParticlesWrapped({ copy: true });
 console.log(`wrapped positions length: ${wrapped.positions.length}`);
 
-lmp.stop();
+lammps.dispose();
 ```
 
 The TypeScript definitions are shipped with the package under
 `types/index.d.ts`, so IDEs receive auto-complete everywhere.
+
+
+### High-level client
+
+For a more ergonomic API, use the helpers in `lammps.js/client`:
+
+```ts
+import { createLammps } from "lammps.js/client";
+
+const lammps = await createLammps();
+await fetch('/in.lj')
+  .then(res => res.text())
+  .then(script => lammps.runInput('in.lj', script));
+
+const { positions, count } = lammps.syncParticles({ copy: true });
+console.log(count);
+
+lammps.dispose();
+```
+
+Use `syncParticles({ wrapped: true })` and `syncBonds({ wrapped: true })` to access
+raw periodic coordinates while the default returns minimum-image data, ready for rendering.
 
 Install via npm:
 

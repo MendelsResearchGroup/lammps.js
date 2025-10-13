@@ -1,6 +1,6 @@
 # Three.js Lennard-Jones Demo
 
-A tiny Vite app that consumes `lammps.js` and renders the Lennard-Jones
+A tiny Vite app that consumes the `lammps.js/client` helper and renders the Lennard-Jones
 sample (`tests/fixtures/lj.mini.in`) with Three.js.
 
 ## Prerequisites
