@@ -85,6 +85,14 @@ def remove_broken_imd():
 
 
 
+def refresh_metadata():
+  print("Generating LAMMPS style and package headers ...")
+  subprocess.check_call(['sh', 'Make.sh', 'style'], cwd=str(SRC_DIR))
+  subprocess.check_call(['sh', 'Make.sh', 'packages'], cwd=str(SRC_DIR))
+  subprocess.check_call(['make', 'lmpinstalledpkgs.h'], cwd=str(SRC_DIR))
+  subprocess.check_call(['make', 'gitversion'], cwd=str(SRC_DIR))
+
+
 def build_native_once():
   print("Native prebuild skipped (not required for wasm build) ...")
 
@@ -128,6 +136,7 @@ def main():
   copy_custom_sources()
   remove_broken_imd()
   build_native_once()
+  refresh_metadata()
   build_wasm()
   build_bundle()
 

@@ -77,7 +77,7 @@ const boxMaterial = new THREE.LineBasicMaterial({
   transparent: true,
   opacity: 0.35,
 });
-const box = new THREE.LineLoop(new THREE.BufferGeometry(), boxMaterial);
+const box = new THREE.LineSegments(new THREE.BufferGeometry(), boxMaterial);
 scene.add(box);
 
 const USE_WRAPPED = false;
