@@ -29,7 +29,7 @@ lammps.start().runScript(`
 const particles = lammps.syncParticles({ copy: true });
 console.log(`atoms: ${particles.count}`);
 
-const wrapped = lammps.syncParticlesWrapped({ copy: true });
+const wrapped = lammps.syncParticles({ wrapped: true, copy: true });
 console.log(`wrapped positions length: ${wrapped.positions.length}`);
 
 lammps.dispose();

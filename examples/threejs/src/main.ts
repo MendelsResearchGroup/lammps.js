@@ -120,16 +120,48 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
   if (!matrix.length || !origin.length) return new Float32Array(0);
   const ax = matrix[0];
   const ay = matrix[1];
+  const az = matrix[2];
   const bx = matrix[3];
   const by = matrix[4];
+  const bz = matrix[5];
+  const cx = matrix[6];
+  const cy = matrix[7];
+  const cz = matrix[8];
   const ox = origin[0];
   const oy = origin[1];
-  return new Float32Array([
-    ox, oy, 0,
-    ox + ax, oy + ay, 0,
-    ox + ax + bx, oy + ay + by, 0,
-    ox + bx, oy + by, 0,
-  ]);
+  const oz = origin[2] ?? 0;
+
+  const corners: [number, number, number][] = [
+    [ox, oy, oz],
+    [ox + ax, oy + ay, oz + az],
+    [ox + bx, oy + by, oz + bz],
+    [ox + cx, oy + cy, oz + cz],
+    [ox + ax + bx, oy + ay + by, oz + az + bz],
+    [ox + ax + cx, oy + ay + cy, oz + az + cz],
+    [ox + bx + cx, oy + by + cy, oz + bz + cz],
+    [ox + ax + bx + cx, oy + ay + by + cy, oz + az + bz + cz],
+  ];
+
+  const edges: [number, number][] = [
+    [0, 1], [0, 2], [0, 3],
+    [1, 4], [1, 5],
+    [2, 4], [2, 6],
+    [3, 5], [3, 6],
+    [4, 7], [5, 7], [6, 7],
+  ];
+
+  const data = new Float32Array(edges.length * 6);
+  edges.forEach(([a, b], idx) => {
+    const offset = idx * 6;
+    data[offset + 0] = corners[a][0];
+    data[offset + 1] = corners[a][1];
+    data[offset + 2] = corners[a][2];
+    data[offset + 3] = corners[b][0];
+    data[offset + 4] = corners[b][1];
+    data[offset + 5] = corners[b][2];
+  });
+
+  return data;
 };
 
 (async () => {

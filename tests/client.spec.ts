@@ -2,7 +2,7 @@ import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { createLammps } from "../client.ts";
+import { createLammps } from "../client.js";
 
 const fixturePath = join(process.cwd(), "tests", "fixtures", "lj.mini.in");
 

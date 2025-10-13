@@ -1,8 +1,8 @@
 import createModule from "./cpp/lammps.js";
 
 import type {
-  LAMMPSWeb,
   LammpsModule,
+  LAMMPSWeb,
   ParticleSnapshot,
   BondSnapshot,
   BoxSnapshot
@@ -117,8 +117,9 @@ export class LammpsClient {
   readonly module: LammpsModule;
   readonly instance: LAMMPSWeb;
   readonly workdir: string;
-  private readonly _heaps: Map<number, HeapView>;
-  private readonly _shifts: Map<number, number>;
+
+  readonly _heaps: Map<number, HeapView>;
+  readonly _shifts: Map<number, number>;
 
   constructor(module: LammpsModule, instance: LAMMPSWeb, options: LammpsClientOptions = {}) {
     this.module = module;
@@ -130,7 +131,7 @@ export class LammpsClient {
     try {
       module.FS.mkdir(this.workdir);
     } catch {
-      /* no-op if already exists */
+      /* already exists */
     }
     module.FS.chdir(this.workdir);
   }

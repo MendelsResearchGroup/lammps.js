@@ -11,7 +11,7 @@
     },
     "./client": {
       "types": "./types/client.d.ts",
-      "default": "./client.ts"
+      "default": "./client.js"
     },
     "./wasm": "./cpp/lammps.js"
   },
@@ -21,6 +21,7 @@
     "cpp/locateFile.js",
     "cpp/build.py",
     "types",
+    "client.js",
     "client.ts",
     "README.md"
   ],
