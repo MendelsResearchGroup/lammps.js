@@ -40,13 +40,9 @@ const resolveView = (module: LammpsModule, view: BufferView) => {
 
 beforeAll(async () => {
   const script = readFileSync(fixturePath, "utf8");
+  const originalProcess = (globalThis as any).process;
+  const hadProcess = typeof originalProcess !== "undefined";
   (globalThis as any).process = undefined;
-  let originalProcess: any;
-  let hadProcess = false;
-  if (typeof process !== "undefined") {
-    originalProcess = process;
-    hadProcess = true;
-  }
 
   try {
     ({ default: createModule } = await import("../cpp/lammps.js"));
@@ -55,11 +51,8 @@ beforeAll(async () => {
       printErr: () => undefined,
     });
   } finally {
-    if (hadProcess) {
-      (globalThis as any).process = originalProcess;
-    } else {
-      delete (globalThis as any).process;
-    }
+    if (hadProcess) (globalThis as any).process = originalProcess;
+    else delete (globalThis as any).process;
   }
 
   try {

@@ -1,7 +1,7 @@
 # lammps.js
 
 [![CI](https://github.com/alexz/lammps.js/actions/workflows/ci.yml/badge.svg)](https://github.com/alexz/lammps.js/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@atomify/lammps.svg)](https://www.npmjs.com/package/@atomify/lammps)
+[![npm version](https://img.shields.io/npm/v/lammps.js.svg)](https://www.npmjs.com/package/lammps.js)
 
 Lightweight typed JavaScript/TypeScript wrapper around LAMMPS. The package exports the compiled `lammps.js` module together with a
 modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and simulation box data.
@@ -31,6 +31,12 @@ lmp.stop();
 The TypeScript definitions are shipped with the package under
 `types/index.d.ts`, so IDEs receive auto-complete everywhere.
 
+Install via npm:
+
+```bash
+npm install lammps.js
+```
+
 ## Building the wasm bundle
 
 ```bash
@@ -51,3 +57,16 @@ npm test
 
 > The build step fetches the LAMMPS sources on first run. Subsequent runs are
 > incremental thanks to the cached checkout and Emscripten cache.
+
+## Examples
+
+A ready-to-run Three.js demo lives in `examples/threejs`:
+
+```bash
+cd examples/threejs
+npm install
+npm run dev
+```
+
+It links against the local workspace copy of `lammps.js` and renders the
+Lennard-Jones sample (`tests/fixtures/lj.mini.in`).
