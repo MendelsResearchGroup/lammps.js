@@ -135,12 +135,12 @@ bool LAMMPSWeb::getIsRunning() const noexcept {
   return sim && sim->update && sim->update->whichflag != 0;
 }
 
-std::int64_t LAMMPSWeb::getCurrentStep() const noexcept {
+double LAMMPSWeb::getCurrentStep() const noexcept {
   const auto *sim = raw();
   if (!sim || !sim->update) {
     return 0;
   }
-  return static_cast<std::int64_t>(sim->update->ntimestep);
+  return static_cast<double>(sim->update->ntimestep);
 }
 
 double LAMMPSWeb::getTimestepSize() const noexcept {

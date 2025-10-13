@@ -70,7 +70,7 @@ public:
 
   [[nodiscard]] bool isReady() const noexcept;
   [[nodiscard]] bool getIsRunning() const noexcept;
-  [[nodiscard]] std::int64_t getCurrentStep() const noexcept;
+  [[nodiscard]] double getCurrentStep() const noexcept;
   [[nodiscard]] double getTimestepSize() const noexcept;
 
   ParticleSnapshot syncParticles();
