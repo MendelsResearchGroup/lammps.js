@@ -1,47 +1,92 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import createModule from "lammps.js";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0f172a);
+scene.background = new THREE.Color(0x020617);
+scene.fog = new THREE.Fog(0x020617, 15, 40);
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 50);
-camera.position.set(0, 4, 10);
-camera.lookAt(0, 0, 0);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 60);
+camera.position.set(5, 6, 10);
 
-const hemi = new THREE.HemisphereLight(0xffffff, 0x334155, 0.7);
-const key = new THREE.DirectionalLight(0xffffff, 0.6);
-key.position.set(2, 3, 2);
-const fill = new THREE.DirectionalLight(0xffffff, 0.25);
-fill.position.set(-3, -2, -1);
-scene.add(hemi, key, fill);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 3;
+controls.maxDistance = 25;
+controls.target.set(0, 0, 0);
 
-const atomsGeometry = new THREE.BufferGeometry();
-const atomMaterial = new THREE.PointsMaterial({
-  color: 0x38bdf8,
-  size: 0.18,
-  sizeAttenuation: true,
+const hemi = new THREE.HemisphereLight(0xdbeafe, 0x0f172a, 0.75);
+const key = new THREE.DirectionalLight(0xf8fafc, 0.65);
+key.position.set(6, 8, 6);
+const rim = new THREE.DirectionalLight(0x38bdf8, 0.35);
+rim.position.set(-6, -4, -5);
+scene.add(hemi, key, rim);
+
+const floorGeometry = new THREE.PlaneGeometry(24, 24);
+const floorMaterial = new THREE.MeshStandardMaterial({
+  color: 0x0f172a,
+  metalness: 0.1,
+  roughness: 0.95,
+  transparent: true,
+  opacity: 0.6,
 });
-const atoms = new THREE.Points(atomsGeometry, atomMaterial);
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -4.5;
+scene.add(floor);
+
+const MAX_PARTICLES = 2048;
+
+const atomGeometry = new THREE.SphereGeometry(0.18, 32, 20);
+const atomMaterial = new THREE.MeshStandardMaterial({
+  color: 0x60a5fa,
+  metalness: 0.35,
+  roughness: 0.3,
+  emissive: 0x0b1120,
+  emissiveIntensity: 0.6,
+  vertexColors: true,
+});
+const atoms = new THREE.InstancedMesh(atomGeometry, atomMaterial, MAX_PARTICLES);
+atoms.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+atoms.count = 0;
+atoms.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(
+  THREE.DynamicDrawUsage
+);
 scene.add(atoms);
 
 const bondsGeometry = new THREE.BufferGeometry();
-const bondsMaterial = new THREE.LineBasicMaterial({ color: 0x64748b, linewidth: 1 });
+const bondsMaterial = new THREE.LineBasicMaterial({
+  color: 0x94a3b8,
+  linewidth: 1,
+  transparent: true,
+  opacity: 0.5,
+});
 const bonds = new THREE.LineSegments(bondsGeometry, bondsMaterial);
 scene.add(bonds);
 
-const boxMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1, opacity: 0.5, transparent: true });
+const boxMaterial = new THREE.LineBasicMaterial({
+  color: 0xffffff,
+  linewidth: 1,
+  transparent: true,
+  opacity: 0.35,
+});
 const box = new THREE.LineLoop(new THREE.BufferGeometry(), boxMaterial);
 scene.add(box);
 
+const mat = new THREE.Matrix4();
+const color = new THREE.Color();
+
 const resize = () => {
-  const { clientWidth, clientHeight } = canvas;
-  renderer.setSize(clientWidth, clientHeight, false);
-  camera.aspect = clientWidth / clientHeight;
+  const rect = canvas.getBoundingClientRect();
+  renderer.setSize(rect.width, rect.height, false);
+  camera.aspect = rect.width / rect.height;
   camera.updateProjectionMatrix();
 };
 
@@ -102,22 +147,26 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
   const step = () => {
     lmp.advance(1, false, false);
 
-    const particles = lmp.syncParticles();
-    const bondsSnap = lmp.syncBonds();
+    const particles = USE_WRAPPED ? lmp.syncParticlesWrapped() : lmp.syncParticles();
+    const bondsSnap = USE_WRAPPED ? lmp.syncBondsWrapped() : lmp.syncBonds();
     const boxSnap = lmp.syncSimulationBox();
 
     const pos = module.HEAPF32.subarray(
       particles.positions.ptr >> 2,
       (particles.positions.ptr >> 2) + particles.positions.length
     );
-    atomsGeometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(Float32Array.from(pos), 3)
-    );
-    atomsGeometry.setDrawRange(0, particles.count);
-    if (particles.count > 0) {
-      atomsGeometry.computeBoundingSphere();
+    const count = Math.min(particles.count, MAX_PARTICLES);
+    atoms.count = count;
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+      mat.makeTranslation(pos[idx], pos[idx + 1], pos[idx + 2]);
+      atoms.setMatrixAt(i, mat);
+      const height = THREE.MathUtils.clamp((pos[idx + 1] + 5) / 10, 0, 1);
+      color.setHSL(0.55 - height * 0.15, 0.65, 0.55 + height * 0.15);
+      atoms.setColorAt(i, color);
     }
+    atoms.instanceMatrix.needsUpdate = true;
+    if (atoms.instanceColor) atoms.instanceColor.needsUpdate = true;
 
     const p1 = module.HEAPF32.subarray(
       bondsSnap.first.ptr >> 2,
@@ -158,6 +207,7 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
 
   const animate = () => {
     step();
+    controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   };
@@ -166,5 +216,9 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
 
   window.addEventListener("beforeunload", () => {
     lmp.stop();
+    atoms.dispose();
+    bonds.geometry.dispose();
+    box.geometry.dispose();
   });
 })();
+const USE_WRAPPED = true;

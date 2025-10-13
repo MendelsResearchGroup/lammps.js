@@ -49,7 +49,9 @@ export interface LAMMPSWeb {
   getTimestepSize(): number;
 
   syncParticles(): ParticleSnapshot;
+  syncParticlesWrapped(): ParticleSnapshot;
   syncBonds(): BondSnapshot;
+  syncBondsWrapped(): BondSnapshot;
   syncSimulationBox(): BoxSnapshot;
 }
 

@@ -152,6 +152,22 @@ double LAMMPSWeb::getTimestepSize() const noexcept {
 }
 
 LAMMPSWeb::ParticleSnapshot LAMMPSWeb::syncParticles() {
+  return captureParticles(false);
+}
+
+LAMMPSWeb::ParticleSnapshot LAMMPSWeb::syncParticlesWrapped() {
+  return captureParticles(true);
+}
+
+LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBonds() {
+  return captureBonds(false);
+}
+
+LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBondsWrapped() {
+  return captureBonds(true);
+}
+
+LAMMPSWeb::ParticleSnapshot LAMMPSWeb::captureParticles(bool wrapped) {
   ParticleSnapshot snapshot{};
 
   auto *sim = raw();
@@ -170,7 +186,7 @@ LAMMPSWeb::ParticleSnapshot LAMMPSWeb::syncParticles() {
   m_particlePositions.resize(static_cast<std::size_t>(numAtoms) * 3);
 
   auto *domain = sim->domain;
-  auto *image = static_cast<int *>(lammps_extract_atom(static_cast<void *>(sim), "image"));
+  auto *image = wrapped ? nullptr : static_cast<int *>(lammps_extract_atom(static_cast<void *>(sim), "image"));
 
   for (std::uint32_t i = 0; i < numAtoms; ++i) {
     double position[3] = { atom->x[i][0], atom->x[i][1], atom->x[i][2] };
@@ -196,7 +212,7 @@ LAMMPSWeb::ParticleSnapshot LAMMPSWeb::syncParticles() {
   return snapshot;
 }
 
-LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBonds() {
+LAMMPSWeb::BondSnapshot LAMMPSWeb::captureBonds(bool wrapped) {
   BondSnapshot snapshot{};
 
   auto *sim = raw();
@@ -221,7 +237,7 @@ LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBonds() {
   m_bondsPosition1.reserve(totalBonds * 3);
   m_bondsPosition2.reserve(totalBonds * 3);
 
-  auto *image = static_cast<int *>(lammps_extract_atom(static_cast<void *>(sim), "image"));
+  auto *image = wrapped ? nullptr : static_cast<int *>(lammps_extract_atom(static_cast<void *>(sim), "image"));
   const bool shareBondAcrossRanks = sim->force && sim->force->newton_bond;
 
   for (int atomIndex = 0; atomIndex < atom->natoms; ++atomIndex) {
@@ -250,18 +266,24 @@ LAMMPSWeb::BondSnapshot LAMMPSWeb::syncBonds() {
         domain->unmap(second, image[mappedIndex]);
       }
 
-      double dx = second[0] - first[0];
-      double dy = second[1] - first[1];
-      double dz = second[2] - first[2];
-      applyMinimumImage(domain, dx, dy, dz);
-
       m_bondsPosition1.push_back(static_cast<float>(first[0]));
       m_bondsPosition1.push_back(static_cast<float>(first[1]));
       m_bondsPosition1.push_back(static_cast<float>(first[2]));
 
-      m_bondsPosition2.push_back(static_cast<float>(first[0] + dx));
-      m_bondsPosition2.push_back(static_cast<float>(first[1] + dy));
-      m_bondsPosition2.push_back(static_cast<float>(first[2] + dz));
+      if (wrapped) {
+        m_bondsPosition2.push_back(static_cast<float>(second[0]));
+        m_bondsPosition2.push_back(static_cast<float>(second[1]));
+        m_bondsPosition2.push_back(static_cast<float>(second[2]));
+      } else {
+        double dx = second[0] - first[0];
+        double dy = second[1] - first[1];
+        double dz = second[2] - first[2];
+        applyMinimumImage(domain, dx, dy, dz);
+
+        m_bondsPosition2.push_back(static_cast<float>(first[0] + dx));
+        m_bondsPosition2.push_back(static_cast<float>(first[1] + dy));
+        m_bondsPosition2.push_back(static_cast<float>(first[2] + dz));
+      }
     }
   }
 

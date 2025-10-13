@@ -25,6 +25,9 @@ const snapshot = wasm.HEAPF32.subarray(
 );
 console.log(`atoms: ${particles.count}`);
 
+const wrapped = lmp.syncParticlesWrapped();
+console.log(`wrapped positions length: ${wrapped.positions.length}`);
+
 lmp.stop();
 ```
 

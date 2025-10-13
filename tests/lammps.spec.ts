@@ -114,4 +114,11 @@ describe("lammps.js wasm interface", () => {
     expect(first.length).toBe(bonds.count * 3);
     expect(second.length).toBe(bonds.count * 3);
   });
+
+  it("supports wrapped snapshots", () => {
+    const wrappedParticles = lmp.syncParticlesWrapped();
+    expect(wrappedParticles.count).toBeGreaterThan(0);
+    const wrappedBonds = lmp.syncBondsWrapped();
+    expect(wrappedBonds.count).toBeGreaterThanOrEqual(0);
+  });
 });

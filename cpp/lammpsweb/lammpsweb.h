@@ -74,7 +74,9 @@ public:
   [[nodiscard]] double getTimestepSize() const noexcept;
 
   ParticleSnapshot syncParticles();
+  ParticleSnapshot syncParticlesWrapped();
   BondSnapshot syncBonds();
+  BondSnapshot syncBondsWrapped();
   BoxSnapshot syncSimulationBox();
 
 private:
@@ -84,6 +86,8 @@ private:
   [[nodiscard]] bool hasSimulation() const noexcept { return static_cast<bool>(m_lmp); }
   [[nodiscard]] LAMMPS_NS::LAMMPS *raw() const noexcept { return m_lmp.get(); }
   void resetStaticBuffers() noexcept;
+  ParticleSnapshot captureParticles(bool wrapped);
+  BondSnapshot captureBonds(bool wrapped);
 
   template <typename Container>
   static pointer_type pointerFrom(Container &buffer) noexcept {
@@ -187,7 +191,9 @@ EMSCRIPTEN_BINDINGS(lammps_web_module) {
     .function("getCurrentStep", &LAMMPSWeb::getCurrentStep)
     .function("getTimestepSize", &LAMMPSWeb::getTimestepSize)
     .function("syncParticles", &LAMMPSWeb::syncParticles)
+    .function("syncParticlesWrapped", &LAMMPSWeb::syncParticlesWrapped)
     .function("syncBonds", &LAMMPSWeb::syncBonds)
+    .function("syncBondsWrapped", &LAMMPSWeb::syncBondsWrapped)
     .function("syncSimulationBox", &LAMMPSWeb::syncSimulationBox);
 }
 #endif
