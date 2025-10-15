@@ -2,7 +2,7 @@ import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { createLammps } from "../client.js";
+import { LammpsClient } from "../client.js";
 
 const fixturePath = join(process.cwd(), "tests", "fixtures", "lj.mini.in");
 
@@ -10,7 +10,7 @@ let client;
 
 beforeAll(async () => {
   const script = readFileSync(fixturePath, "utf8");
-  client = await createLammps({ print: () => undefined, printErr: () => undefined });
+  client = await LammpsClient.create({ print: () => undefined, printErr: () => undefined });
   client.start();
   client.runInput("in.lj", script);
 });

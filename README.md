@@ -9,9 +9,9 @@ modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and s
 ## Usage
 
 ```ts
-import { createLammps } from "lammps.js/client";
+import { LammpsClient } from "lammps.js/client";
 
-const lammps = await createLammps();
+const lammps = await LammpsClient.create();
 
 lammps.start().runScript(`
   units lj
@@ -35,6 +35,9 @@ console.log(`wrapped positions length: ${wrapped.positions.length}`);
 lammps.dispose();
 ```
 
+Advance the solver (via `advance(stepCount)`) between snapshots to receive new frames.
+
+Advance the solver (`advance()`) before sampling to obtain subsequent frames.
 The TypeScript definitions are shipped with the package under
 `types/index.d.ts`, so IDEs receive auto-complete everywhere.
 
@@ -44,18 +47,23 @@ The TypeScript definitions are shipped with the package under
 For a more ergonomic API, use the helpers in `lammps.js/client`:
 
 ```ts
-import { createLammps } from "lammps.js/client";
+import { LammpsClient } from "lammps.js/client";
 
-const lammps = await createLammps();
-await fetch('/in.lj')
+const lammps = await LammpsClient.create();
+await fetch("/in.lj")
   .then(res => res.text())
-  .then(script => lammps.runInput('in.lj', script));
+  .then(script => lammps.runInput("in.lj", script));
 
-const { positions, count } = lammps.syncParticles({ copy: true });
-console.log(count);
+for (let frame = 0; frame < 10; frame += 1) {
+  lammps.advance(1);
+  const { positions, count } = lammps.syncParticles({ copy: true });
+  console.log(`frame ${frame}: ${count} atoms`);
+}
 
 lammps.dispose();
 ```
+
+Advance the solver (via `advance(stepCount)`) between snapshots to receive new frames.
 
 Use `syncParticles({ wrapped: true })` and `syncBonds({ wrapped: true })` to access
 raw periodic coordinates while the default returns minimum-image data, ready for rendering.

@@ -48,6 +48,10 @@ export declare class LammpsClient {
   readonly workdir: string;
 
   constructor(module: LammpsModule, instance: LAMMPSWeb, options?: LammpsClientOptions);
+  static create(
+    moduleOptions?: ModuleOptions,
+    clientOptions?: LammpsClientOptions
+  ): Promise<LammpsClient>;
 
   start(): this;
   stop(): this;

@@ -78,6 +78,12 @@ export class LammpsClient {
     module.FS.chdir(this.workdir);
   }
 
+  static async create(moduleOptions = {}, clientOptions = {}) {
+    const module = await createModule(moduleOptions);
+    const instance = new module.LAMMPSWeb();
+    return new LammpsClient(module, instance, clientOptions);
+  }
+
   start() {
     this.instance.start();
     return this;
@@ -153,9 +159,7 @@ export class LammpsClient {
 }
 
 export async function createLammps(moduleOptions = {}, clientOptions = {}) {
-  const module = await createModule(moduleOptions);
-  const instance = new module.LAMMPSWeb();
-  return new LammpsClient(module, instance, clientOptions);
+  return LammpsClient.create(moduleOptions, clientOptions);
 }
 
 export { createModule };

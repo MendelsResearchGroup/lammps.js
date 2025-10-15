@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { createLammps } from "lammps.js/client";
+import { LammpsClient } from "lammps.js/client";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
 
@@ -165,7 +165,7 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
 };
 
 (async () => {
-  const [script, client] = await Promise.all([fetchInput(), createLammps()]);
+  const [script, client] = await Promise.all([fetchInput(), LammpsClient.create()]);
   client.start();
   client.runInput("in.lj", script);
 
