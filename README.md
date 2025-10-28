@@ -35,9 +35,9 @@ console.log(`wrapped positions length: ${wrapped.positions.length}`);
 lammps.dispose();
 ```
 
-Advance the solver (via `advance(stepCount)`) between snapshots to receive new frames.
+Advance the solver (via `advance(stepCount, applyPre?, applyPost?)`) between snapshots to receive new frames.
 
-Advance the solver (`advance()`) before sampling to obtain subsequent frames.
+Advance the solver (`advance(stepCount, applyPre?, applyPost?)`) before sampling to obtain subsequent frames.
 The TypeScript definitions are shipped with the package under
 `types/index.d.ts`, so IDEs receive auto-complete everywhere.
 
@@ -55,7 +55,7 @@ await fetch("/in.lj")
   .then(script => lammps.runInput("in.lj", script));
 
 for (let frame = 0; frame < 10; frame += 1) {
-  lammps.advance(1);
+  lammps.advance(1, false, false);
   const { positions, count } = lammps.syncParticles({ copy: true });
   console.log(`frame ${frame}: ${count} atoms`);
 }
@@ -63,7 +63,7 @@ for (let frame = 0; frame < 10; frame += 1) {
 lammps.dispose();
 ```
 
-Advance the solver (via `advance(stepCount)`) between snapshots to receive new frames.
+Advance the solver (via `advance(stepCount, applyPre?, applyPost?)`) between snapshots to receive new frames.
 
 Use `syncParticles({ wrapped: true })` and `syncBonds({ wrapped: true })` to access
 raw periodic coordinates while the default returns minimum-image data, ready for rendering.

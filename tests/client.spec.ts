@@ -10,7 +10,19 @@ let client;
 
 beforeAll(async () => {
   const script = readFileSync(fixturePath, "utf8");
-  client = await LammpsClient.create({ print: () => undefined, printErr: () => undefined });
+  (globalThis as any).process = undefined;
+  let originalProcess: any;
+  let hadProcess = false;
+  if (typeof process !== "undefined") {
+    originalProcess = process;
+    hadProcess = true;
+  }
+  try {
+    client = await LammpsClient.create({ print: () => undefined, printErr: () => undefined });
+  } finally {
+    if (hadProcess) (globalThis as any).process = originalProcess;
+    else delete (globalThis as any).process;
+  }
   client.start();
   client.runInput("in.lj", script);
 });
