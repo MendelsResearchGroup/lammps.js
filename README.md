@@ -3,8 +3,8 @@
 [![CI](https://github.com/alexz/lammps.js/actions/workflows/ci.yml/badge.svg)](https://github.com/alexz/lammps.js/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/lammps.js.svg)](https://www.npmjs.com/package/lammps.js)
 
-Lightweight typed JavaScript/TypeScript wrapper around LAMMPS. The package exports the compiled `lammps.js` module together with a
-modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and simulation box data.
+Run LAMMPS directly in the browser — a WebAssembly build with TypeScript-ready bindings.
+The package exports the compiled `lammps.js` module together with a modern interface (`LAMMPSWeb`) that exposes snapshots for particles, bonds and simulation box data.
 
 ## Usage
 

@@ -1,7 +1,7 @@
 {
   "name": "lammps.js",
-  "version": "1.0.0",
-  "description": "Browser-friendly WebAssembly build of LAMMPS with a typed JavaScript interface.",
+  "version": "1.1.0",
+  "description": "Run LAMMPS directly in the browser — a WebAssembly build with TypeScript-ready bindings.",
   "license": "MIT",
   "type": "module",
   "exports": {
