@@ -10,8 +10,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x020617);
-scene.fog = new THREE.Fog(0x020617, 15, 40);
+scene.background = new THREE.Color(0xe0f2fe);
+scene.fog = new THREE.Fog(0xe0f2fe, 20, 55);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 60);
 camera.position.set(5, 6, 10);
@@ -22,20 +22,20 @@ controls.minDistance = 3;
 controls.maxDistance = 25;
 controls.target.set(0, 0, 0);
 
-const hemi = new THREE.HemisphereLight(0xdbeafe, 0x0f172a, 0.75);
-const key = new THREE.DirectionalLight(0xf8fafc, 0.65);
+const hemi = new THREE.HemisphereLight(0xffffff, 0xcbd5f5, 0.85);
+const key = new THREE.DirectionalLight(0xffffff, 0.75);
 key.position.set(6, 8, 6);
-const rim = new THREE.DirectionalLight(0x38bdf8, 0.35);
+const rim = new THREE.DirectionalLight(0x60a5fa, 0.4);
 rim.position.set(-6, -4, -5);
 scene.add(hemi, key, rim);
 
 const floorGeometry = new THREE.PlaneGeometry(24, 24);
 const floorMaterial = new THREE.MeshStandardMaterial({
-  color: 0x0f172a,
-  metalness: 0.1,
-  roughness: 0.95,
+  color: 0xf8fafc,
+  metalness: 0.05,
+  roughness: 0.9,
   transparent: true,
-  opacity: 0.6,
+  opacity: 0.7,
 });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 floor.rotation.x = -Math.PI / 2;
@@ -46,11 +46,11 @@ const MAX_PARTICLES = 2048;
 
 const atomGeometry = new THREE.SphereGeometry(0.18, 32, 20);
 const atomMaterial = new THREE.MeshStandardMaterial({
-  color: 0x60a5fa,
-  metalness: 0.35,
-  roughness: 0.3,
-  emissive: 0x0b1120,
-  emissiveIntensity: 0.6,
+  color: 0x93c5fd,
+  metalness: 0.25,
+  roughness: 0.35,
+  emissive: 0x1d4ed8,
+  emissiveIntensity: 0.35,
   vertexColors: true,
 });
 const atoms = new THREE.InstancedMesh(atomGeometry, atomMaterial, MAX_PARTICLES);
@@ -63,19 +63,21 @@ scene.add(atoms);
 
 const bondsGeometry = new THREE.BufferGeometry();
 const bondsMaterial = new THREE.LineBasicMaterial({
-  color: 0x94a3b8,
+  color: 0x38bdf8,
   linewidth: 1,
   transparent: true,
-  opacity: 0.5,
+  opacity: 0.6,
 });
 const bonds = new THREE.LineSegments(bondsGeometry, bondsMaterial);
 scene.add(bonds);
 
 const boxMaterial = new THREE.LineBasicMaterial({
-  color: 0xffffff,
+  color: 0x1e293b,
   linewidth: 1,
   transparent: true,
-  opacity: 0.35,
+  opacity: 0.85,
+  depthTest: true,
+  depthWrite: false,
 });
 const box = new THREE.LineSegments(new THREE.BufferGeometry(), boxMaterial);
 scene.add(box);
@@ -184,7 +186,7 @@ const buildBox = (matrix: Float32Array, origin: Float32Array) => {
       mat.makeTranslation(pos[idx], pos[idx + 1], pos[idx + 2]);
       atoms.setMatrixAt(i, mat);
       const height = THREE.MathUtils.clamp((pos[idx + 1] + 5) / 10, 0, 1);
-      color.setHSL(0.55 - height * 0.15, 0.65, 0.55 + height * 0.15);
+      color.setHSL(0.55 - height * 0.1, 0.5, 0.7 + height * 0.1);
       atoms.setColorAt(i, color);
     }
     atoms.instanceMatrix.needsUpdate = true;
