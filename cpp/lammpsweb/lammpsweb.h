@@ -63,7 +63,7 @@ public:
   void start();
   void stop();
 
-  void advance(std::int64_t steps = 1, bool applyPre = false, bool applyPost = false);
+  void advance(std::int32_t steps = 1, bool applyPre = false, bool applyPost = false);
   void runCommand(const std::string &command);
   void runScript(const std::string &script);
   void runFile(const std::string &path);

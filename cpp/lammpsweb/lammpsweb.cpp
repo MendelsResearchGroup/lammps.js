@@ -14,7 +14,7 @@
 
 namespace {
 
-inline std::string buildRunCommand(std::int64_t steps, bool applyPre, bool applyPost) {
+inline std::string buildRunCommand(std::int32_t steps, bool applyPre, bool applyPost) {
   std::string command = "run ";
   command += std::to_string(steps);
   command += applyPre ? " pre yes" : " pre no";
@@ -86,7 +86,7 @@ void LAMMPSWeb::stop() {
   resetStaticBuffers();
 }
 
-void LAMMPSWeb::advance(std::int64_t steps, bool applyPre, bool applyPost) {
+void LAMMPSWeb::advance(std::int32_t steps, bool applyPre, bool applyPost) {
   auto *sim = raw();
   if (!sim || steps <= 0) {
     return;
