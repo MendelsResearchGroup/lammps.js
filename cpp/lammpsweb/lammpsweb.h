@@ -175,7 +175,7 @@ EMSCRIPTEN_BINDINGS(lammps_web_module) {
     .function(
       "advance",
       emscripten::optional_override([](LAMMPSWeb &self,
-                                       std::int64_t steps,
+                                       std::int32_t steps,
                                        emscripten::val applyPre,
                                        emscripten::val applyPost) {
         const bool pre = applyPre.isUndefined() ? false : applyPre.as<bool>();
